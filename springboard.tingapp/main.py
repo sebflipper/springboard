@@ -111,12 +111,18 @@ def button_right():
         state['app_index'] = len(apps) - 1
         state['scroll_position'] += 0.02  # little nudge animation
 
+def settings_done(dummy):
+    global doing_settings
+    print "done"
+    doing_settings=False
+
 @touch((0,0), (320,20),"topleft")
 def on_show_settings(action):
     global doing_settings
     if action == 'down' and not doing_settings:
-        settings_screen = Settings()
+        settings_screen = Settings(callback=settings_done)
         doing_settings=True
+        print "settings foin"
 
 @touch((0,20), (320,220),"topleft")
 def on_touch(action):
