@@ -95,8 +95,6 @@ state = {
     'scroll_position': 0
 }
 
-doing_settings = False
-
 @button.press('left')
 def button_left():
     state['app_index'] -= 1
@@ -111,22 +109,15 @@ def button_right():
         state['app_index'] = len(apps) - 1
         state['scroll_position'] += 0.02  # little nudge animation
 
-def settings_done(dummy):
-    global doing_settings
-    print "done"
-    doing_settings=False
 
 @touch((0,0), (320,20),"topleft")
 def on_show_settings(action):
-    global doing_settings
-    if action == 'down' and not doing_settings:
-        settings_screen = Settings(callback=settings_done)
-        doing_settings=True
-        print "settings foin"
+    if action == 'down':
+        Settings(callback=settings_done).run()
 
 @touch((0,20), (320,220),"topleft")
 def on_touch(action):
-    if action == 'down' and not doing_settings:
+    if action == 'down':
         app = apps[state['app_index']]
         screen.fill(color='black')
         screen.text(
@@ -164,30 +155,29 @@ def draw_dots():
         )
     
 def loop():
-    if not doing_settings:
-        screen.fill(color='teal')
-        
-        screen.image(
-            'tingbot-t.png',
-            xy=(10,7),
-            align='topleft',
-        )
-        draw_dots()
-        
-        scroll_position = state['scroll_position']
-        app_index = state['app_index']
-        scroll_position += (app_index-scroll_position)*0.2
-        
-        if math.floor(scroll_position) != math.ceil(scroll_position):
-            draw_app_at_index(
-                int(math.floor(scroll_position)),
-                scroll_position)
-            
+    screen.fill(color='teal')
+    
+    screen.image(
+        'tingbot-t.png',
+        xy=(10,7),
+        align='topleft',
+    )
+    draw_dots()
+    
+    scroll_position = state['scroll_position']
+    app_index = state['app_index']
+    scroll_position += (app_index-scroll_position)*0.2
+    
+    if math.floor(scroll_position) != math.ceil(scroll_position):
         draw_app_at_index(
-            int(math.ceil(scroll_position)),
+            int(math.floor(scroll_position)),
             scroll_position)
-             
-        state['scroll_position'] = scroll_position
+        
+    draw_app_at_index(
+        int(math.ceil(scroll_position)),
+        scroll_position)
+         
+    state['scroll_position'] = scroll_position
 
 # run the app
 tingbot.run(loop)
