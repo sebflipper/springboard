@@ -3,6 +3,9 @@ from settings import Settings
 from tingbot import *
 from cached_property import cached_property
 import os, logging, math, subprocess, json
+import pyudev
+import pkg_resources
+udev_context = pyudev.Context()
 
 def image_with_text(string, color='grey', font=None, font_size=32, antialias=None):
     from tingbot.graphics import _font, _color
@@ -92,7 +95,10 @@ for filename in os.listdir(apps_dir):
 
 state = {
     'app_index': 0,
-    'scroll_position': 0
+    'scroll_position': 0,
+    'mouse': False,
+    'keyboard': False,
+    'joystick': False,
 }
 
 @button.press('left')
@@ -153,6 +159,21 @@ def draw_dots():
             xy=(start_x + app_i*10, 230),
             align='left'
         )
+
+def count_peripherals(name):
+    args = {name:1}
+    devices = udev_context.list_devices(**args)
+    unique_devices = set(x.properties['ID_PATH'] for x in devices)
+    return len(unique_devices)
+        
+@every(seconds=0.5)
+def find_peripherals():
+    state['mouse'] = count_peripherals('ID_INPUT_MOUSE')>0
+    state['keyboard'] = count_peripherals('ID_INPUT_KEYBOARD')>0
+    state['joystick'] = count_peripherals('ID_INPUT_JOYSTICK')>0
+    
+def iconise(fname):
+    return os.path.join(os.path.dirname(__file__),'icons',fname)
     
 def loop():
     screen.fill(color='teal')
@@ -162,6 +183,21 @@ def loop():
         xy=(10,7),
         align='topleft',
     )
+    if state['mouse']:
+        mouse_img = 'mouse.png'
+    else:
+        mouse_img = 'mousex.png'
+    if state['keyboard']:
+        kbd_img = 'keyboard.png'
+    else:
+        kbd_img = 'keyboardx.png'
+    if state['joystick']:
+        joystick_img = 'joystick.png'
+    else:
+        joystick_img = 'joystickx.png'
+    screen.image(iconise(joystick_img), xy=(270,2), align='topleft')
+    screen.image(iconise(mouse_img), xy=(245,2), align='topleft') 
+    screen.image(iconise(kbd_img), xy=(220,2), align='topleft') 
     draw_dots()
     
     scroll_position = state['scroll_position']
