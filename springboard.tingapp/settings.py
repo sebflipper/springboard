@@ -1,9 +1,11 @@
 import socket
+import threading
 
 import wifi
 import pygame
 import tingbot
 import tingbot_gui as gui
+from icon_utils import get_network_icon_name, iconise
 
 IFACE = 'wlan0'
 
@@ -16,7 +18,42 @@ def can_update_os():
 def update_os():
     ###FIXME###
     print "updating OS"
+
+
+def draw_cell(widget, cell):
+    print widget, cell
+    if widget.pressed:
+        widget.fill(widget.style.button_pressed_color)
+    else:
+        widget.fill(widget.style.popup_bg_color)
+    if isinstance(cell, wifi.Cell) or isinstance(cell,tingbot.hardware.WifiCell):
+        label = cell.ssid
+        widget.image(iconise(get_network_icon_name(cell)),
+                   xy=(widget.size[0]-5, widget.size[1] / 2),
+                   align="right")
+    else:
+        label = cell
+    widget.text(label,
+              xy=(5, widget.size[1] / 2),
+              align = "left",
+              color=widget.style.button_text_color,
+              font = widget.style.button_text_font,
+              font_size = widget.style.button_text_font_size)     
     
+class CellButton(gui.Button):
+    def draw(self):
+        draw_cell(self,self.label)
+
+class CellDropDown(gui.DropDown):
+    def __init__(self, *args, **kwargs):
+        super(CellDropDown,self).__init__(*args,**kwargs)
+        self.style.popupmenu_button_class = CellButton    
+  
+    def draw(self):
+        draw_cell(self,self.selected[0])
+        
+
+
 class CellSettings(gui.MessageBox):
     def __init__(self, cell, style=None):
         super(CellSettings, self).__init__((20,20), (280,160), "topleft", style=style,
@@ -75,30 +112,24 @@ class Settings(gui.Dialog):
         gui.StaticText((160,23), (100,20), parent=self.panel, style=style14, label="Settings")
         #add widgets
         i = 0
-        #add wifi list if dongle attached
-        #need to make this auto-update every 30s or so...
-        if 1:
-            try:
-                cells = wifi.Cell.all(IFACE)
-            except wifi.exceptions.InterfaceError:
-                #no dongle
-                pass
+        self.current_cell = tingbot.get_wifi_cell()
+        if self.current_cell is not None:
+            # fill in with basic details for now, but set scan running and we'll 
+            # update later
+            self.cell_finder = threading.Thread(target=self.find_cells)
+            self.cell_finder.start()
+            self.found_cells_timer = self.create_timer(self.show_found_cells,seconds=0.5)
+            if self.current_cell:
+                cell_list = [self.current_cell]
             else:
-                cell_list = [(x.ssid,x) for x in cells]
-                gui.StaticText((16,59+i*32), (120,27), align="left", style=style14,
-                               parent=self.panel, label="Wi-Fi Network:", text_align="left")
-                dd = gui.DropDown((313,59+i*32),(153,27),align="right", style=style14,
-                             parent=self.panel, values = cell_list,callback = self.wifi_selected)
-                i += 1
+                cell_list = ["Scanning..."]
+            gui.StaticText((16,59+i*32), (120,27), align="left", style=style14,
+                           parent=self.panel, label="Wi-Fi Network:", text_align="left")
+            self.cell_dropdown = CellDropDown((313,59+i*32),(153,27),align="right", style=style14,
+                                               parent=self.panel, values = cell_list) 
+            i += 1
         #show IP address
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
-            s.connect(("8.8.8.8",80))
-            ip_addr = s.getsockname()[0]
-        except IOError:
-            ip_addr = "No connection"
-        finally:
-            s.close()
+        ip_addr = tingbot.get_ip_address() or "No connection"
         gui.StaticText((16,59+i*32), (120,27), align="left", style=style14, 
                        parent=self.panel, label="IP Address:", text_align="left")
         gui.StaticText((304,59+i*32), (153,27), align="right", style=style14, 
@@ -117,6 +148,27 @@ class Settings(gui.Dialog):
             gui.Button((313,59+i*32),(120,27), align="right", style=style14,
                        parent=self.panel, label="Update Now", callback=update_os)
         self.update(downwards=True)
-        
+
     def wifi_selected(self,name,cell):
         CellSettings(cell,self.style).run()
+        
+    def find_cells(self):
+        try:
+            self.cells = wifi.Cell.all(IFACE)
+        except wifi.exceptions.InterfaceError:
+            self.cells = []
+         
+    def show_found_cells(self):
+        if not self.cell_finder.is_alive():
+            self.found_cells_timer.stop()
+            cell_list = [(x,x) for x in self.cells]
+            self.cell_dropdown.values = cell_list
+            self.cell_dropdown.callback = self.wifi_selected
+            if cell_list:
+                self.cell_dropdown.selected = cell_list[0]
+            else:
+                self.cell_dropdown.selected = ("No wifi signals",None)
+            self.update(downwards=True)
+            
+        # to be run in main run loop via setTimer
+

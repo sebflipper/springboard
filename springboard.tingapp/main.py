@@ -3,9 +3,9 @@ from settings import Settings
 from tingbot import *
 from cached_property import cached_property
 import os, logging, math, subprocess, json
-import pyudev
 import pkg_resources
-udev_context = pyudev.Context()
+
+from icon_utils import iconise, get_network_icon_name
 
 def image_with_text(string, color='grey', font=None, font_size=32, antialias=None):
     from tingbot.graphics import _font, _color
@@ -99,6 +99,7 @@ state = {
     'mouse': False,
     'keyboard': False,
     'joystick': False,
+    'network': 'wifi-000.png',
 }
 
 @button.press('left')
@@ -119,7 +120,7 @@ def button_right():
 @touch((0,0), (320,20),"topleft")
 def on_show_settings(action):
     if action == 'down':
-        Settings(callback=settings_done).run()
+        Settings().run()
 
 @touch((0,20), (320,220),"topleft")
 def on_touch(action):
@@ -160,21 +161,15 @@ def draw_dots():
             align='left'
         )
 
-def count_peripherals(name):
-    args = {name:1}
-    devices = udev_context.list_devices(**args)
-    unique_devices = set(x.properties['ID_PATH'] for x in devices)
-    return len(unique_devices)
         
 @every(seconds=0.5)
 def find_peripherals():
-    state['mouse'] = count_peripherals('ID_INPUT_MOUSE')>0
-    state['keyboard'] = count_peripherals('ID_INPUT_KEYBOARD')>0
-    state['joystick'] = count_peripherals('ID_INPUT_JOYSTICK')>0
-    
-def iconise(fname):
-    return os.path.join(os.path.dirname(__file__),'icons',fname)
-    
+    state['mouse'] = mouse_attached()
+    state['keyboard'] = keyboard_attached()
+    state['joystick'] = joystick_attached()
+    state['network'] = get_network_icon_name(get_wifi_cell())
+
+            
 def loop():
     screen.fill(color='teal')
     
@@ -195,6 +190,7 @@ def loop():
         joystick_img = 'joystick.png'
     else:
         joystick_img = 'joystickx.png'
+    screen.image(iconise(state['network']), xy=(295,2), align='topleft')
     screen.image(iconise(joystick_img), xy=(270,2), align='topleft')
     screen.image(iconise(mouse_img), xy=(245,2), align='topleft') 
     screen.image(iconise(kbd_img), xy=(220,2), align='topleft') 
