@@ -21,7 +21,6 @@ def update_os():
 
 
 def draw_cell(widget, cell):
-    print widget, cell
     if widget.pressed:
         widget.fill(widget.style.button_pressed_color)
     else:
