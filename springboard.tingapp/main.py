@@ -1,9 +1,9 @@
 import tingbot
+from threading import Timer
 from settings import Settings
 from tingbot import *
 from cached_property import cached_property
 import os, logging, math, subprocess, json
-import pkg_resources
 
 from icon_utils import iconise, get_network_icon_name
 
@@ -99,7 +99,7 @@ state = {
     'mouse': False,
     'keyboard': False,
     'joystick': False,
-    'network': 'wifi-000.png',
+    'network': 'WiFi-1.png',
 }
 
 @button.press('left')
@@ -161,13 +161,21 @@ def draw_dots():
             align='left'
         )
 
+class PeripheralFinder():
+    def __init__(self, delay=0.5):
+        self.stopping = False
+        Timer(delay,self.find_peripherals).start()
         
-@every(seconds=0.5)
-def find_peripherals():
-    state['mouse'] = mouse_attached()
-    state['keyboard'] = keyboard_attached()
-    state['joystick'] = joystick_attached()
-    state['network'] = get_network_icon_name(get_wifi_cell())
+    def find_peripherals(self): # all off these assignments are atomic, so are thread safe.
+        if not self.stopping:
+            state['mouse'] = mouse_attached()
+            state['keyboard'] = keyboard_attached()
+            state['joystick'] = joystick_attached()
+            state['network'] = get_network_icon_name(get_wifi_cell())
+            Timer(0.5,self.find_peripherals).start()
+    
+    def stop(self):
+        self.stopping = True
 
             
 def loop():
@@ -212,4 +220,8 @@ def loop():
     state['scroll_position'] = scroll_position
 
 # run the app
-tingbot.run(loop)
+finder = PeripheralFinder(1.0)
+try:
+    tingbot.run(loop)
+except SystemExit:
+    finder.stop()
