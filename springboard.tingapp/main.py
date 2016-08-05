@@ -117,12 +117,12 @@ def button_right():
         state['scroll_position'] += 0.02  # little nudge animation
 
 
-@touch((0,0), (320,20),"topleft")
+@touch((0,0), (320,30),"topleft")
 def on_show_settings(action):
     if action == 'down':
         Settings().run()
 
-@touch((0,20), (320,220),"topleft")
+@touch((0,30), (320,210),"topleft")
 def on_touch(action):
     if action == 'down':
         app = apps[state['app_index']]
@@ -179,21 +179,21 @@ def loop():
         align='topleft',
     )
     if state['mouse']:
-        mouse_img = 'mouse.png'
+        mouse_img = 'Mouse-1.png'
     else:
-        mouse_img = 'mousex.png'
+        mouse_img = 'Mouse-2.png'
     if state['keyboard']:
-        kbd_img = 'keyboard.png'
+        kbd_img = 'Keyboard-1.png'
     else:
-        kbd_img = 'keyboardx.png'
+        kbd_img = 'Keyboard-2.png'
     if state['joystick']:
-        joystick_img = 'joystick.png'
+        joystick_img = 'Gamepad-1.png'
     else:
-        joystick_img = 'joystickx.png'
-    screen.image(iconise(state['network']), xy=(295,2), align='topleft')
-    screen.image(iconise(joystick_img), xy=(270,2), align='topleft')
-    screen.image(iconise(mouse_img), xy=(245,2), align='topleft') 
-    screen.image(iconise(kbd_img), xy=(220,2), align='topleft') 
+        joystick_img = 'Gamepad-2.png'
+    screen.image(iconise(state['network']), xy=(309,0), align='top')
+    screen.image(iconise(joystick_img), xy=(298,0), align='topright')
+    screen.image(iconise(mouse_img), xy=(277,0), align='topright') 
+    screen.image(iconise(kbd_img), xy=(266,0), align='topright') 
     draw_dots()
     
     scroll_position = state['scroll_position']
