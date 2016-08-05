@@ -28,12 +28,18 @@ def draw_cell(widget, cell):
     if isinstance(cell, wifi.Cell) or isinstance(cell,tingbot.hardware.WifiCell):
         label = cell.ssid
         widget.image(iconise(get_network_icon_name(cell)),
-                   xy=(widget.size[0]-5, widget.size[1] / 2),
-                   align="right")
+                     xy=(widget.size[0]-5, widget.size[1] / 2),
+                     align="right")
+        if hasattr(cell,'encrypted') and cell.encrypted:
+            widget.image(iconise("Lock-1.png"),
+                         xy=(widget.size[0]-23, widget.size[1] / 2),
+                         align="right")
+            
     else:
         label = cell
     widget.text(label,
               xy=(5, widget.size[1] / 2),
+              size=(widget.size[0]-36,widget.size[1]),
               align = "left",
               color=widget.style.button_text_color,
               font = widget.style.button_text_font,
