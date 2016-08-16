@@ -94,14 +94,14 @@ state = {
     'scroll_position': 0
 }
 
-@button.press('left')
+@left_button.press
 def button_left():
     state['app_index'] -= 1
     if state['app_index'] < 0:
         state['app_index'] = 0
         state['scroll_position'] -= 0.02  # little nudge animation
 
-@button.press('right')
+@right_button.press
 def button_right():
     state['app_index'] += 1
     if state['app_index'] >= len(apps):
