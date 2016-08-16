@@ -1,5 +1,7 @@
 import socket
 import threading
+import subprocess
+import re
 
 import wifi
 import pygame
@@ -95,12 +97,14 @@ class CellSettings(gui.MessageBox):
                     self.scheme = wifi.Scheme.for_cell(interface=IFACE,
                                                        name=self.cell.ssid,
                                                        cell=self.cell)
-            try:
-                self.scheme.save()
                 try:
-                    self.scheme.activate()
-                except wifi.exceptions.ConnectionError:
-                    gui.message_box(message="Incorrect Password")
+                    self.scheme.save()
+                except IOError:
+                    gui.message_box(message="Not allowed to change network")
+            try:
+                self.scheme.activate()
+            except wifi.exceptions.ConnectionError:
+                gui.message_box(message="Incorrect Password")
             except IOError:
                 gui.message_box(message="Not allowed to change network")
         elif label == "Forget":
@@ -128,7 +132,9 @@ class Settings(gui.Dialog):
             # update later
             self.cell_finder = threading.Thread(target=self.find_cells)
             self.cell_finder.start()
-            self.found_cells_timer = self.create_timer(self.show_found_cells, seconds=0.5)
+            self.version_checker = threading.Thread(target=self.check_versions)
+            self.version_checker.start()
+            self.thread_checker = self.create_timer(self.check_threads, seconds=0.3)
             if self.current_cell:
                 cell_list = [self.current_cell]
             else:
@@ -150,16 +156,19 @@ class Settings(gui.Dialog):
         i += 1
         # show tingbot version
         gui.StaticText((16, 59 + i*32), (120, 27), align="left", style=style14,
-                       parent=self.panel, label="Tingbot OS:", text_align="left")
-        gui.StaticText((304, 59 + i*32), (120, 27), align="right", style=style14,
-                       parent=self.panel, label=tingbot.__version__, text_align="right")
+                       parent=self.panel, label="Current version:", text_align="left")
+        self.version_label = gui.StaticText((304, 59 + i*32), (120, 27), align="right", style=style14,
+                                            parent=self.panel, label="", text_align="right")
         i += 1
-        # show update button
-        if can_update_os():
-            gui.StaticText((16, 59 + i*32), (120, 27), align="left", style=style14,
-                           parent=self.panel, label="Update Available:", text_align="left")
-            gui.Button((313, 59 + i*32), (120, 27), align="right", style=style14,
-                       parent=self.panel, label="Update Now", callback=update_os)
+        # add update button but do not show it
+        self.update_label = gui.StaticText((16, 59 + i*32), (120, 27), align="left", style=style14,
+                                           parent=self.panel, 
+                                           label="Update Available:", 
+                                           text_align="left")
+        self.update_label.visible = False
+        self.update_button = gui.Button((313, 59 + i*32), (120, 27), align="right", style=style14,
+                                        parent=self.panel, label="Update Now", callback=update_os)
+        self.update_button.visible = False
         self.update(downwards=True)
 
     def wifi_selected(self, name, cell):
@@ -171,9 +180,23 @@ class Settings(gui.Dialog):
         except wifi.exceptions.InterfaceError:
             self.cells = []
 
-    def show_found_cells(self):
-        if not self.cell_finder.is_alive():
-            self.found_cells_timer.stop()
+    def check_versions(self):
+        self.newer_version = True
+        try:
+            info = subprocess.check_output(['/usr/bin/tbupgrade','--check-only'])
+        except subprocess.CalledProcessError as e:
+            info = e.output
+            if e.returncode == 2:
+                 self.newer_version = False
+        try:
+            self.installed = re.search('Installed Version:\s*(\d+.\d+.\d+)',info).group(1)
+            self.latest = re.search('Latest Version:\s*(\d+.\d+.\d+)',info).group(1)
+        except AttributeError:
+            self.installed = "Error"
+            self.latest = "Error"
+
+    def check_threads(self):
+        if self.cell_finder and not self.cell_finder.is_alive():
             cell_list = [(x, x) for x in self.cells]
             self.cell_dropdown.values = cell_list
             self.cell_dropdown.callback = self.wifi_selected
@@ -181,4 +204,15 @@ class Settings(gui.Dialog):
                 self.cell_dropdown.selected = cell_list[0]
             else:
                 self.cell_dropdown.selected = ("No wifi signals", None)
+            self.cell_finder = None
             self.update(downwards=True)
+        if self.version_checker and not self.version_checker.is_alive():
+            self.version_label.label = self.installed
+            if self.newer_version:
+                self.update_button.label = "Update to " + self.latest
+                self.update_button.visible = True
+                self.update_label.visible = True
+            self.version_checker = None
+            self.update(downwards=True)
+        if self.version_checker is None and self.cell_finder is None:
+            self.thread_checker.stop()
