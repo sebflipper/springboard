@@ -84,6 +84,8 @@ class CellSettings(gui.MessageBox):
     def close(self, label):
         if label == "Connect":
             if (self.scheme is None) or (self.password and self.password.string != "        "):
+                if self.scheme:
+                    self.scheme.delete()
                 if self.password:
                     self.scheme = wifi.Scheme.for_cell(interface=IFACE,
                                                        name=self.cell.ssid,
