@@ -11,20 +11,6 @@ from icon_utils import get_network_icon_name, iconise
 
 IFACE = 'wlan0'
 
-
-def get_os_version():
-    return tingbot.__version__
-
-
-def can_update_os():
-    return True
-
-
-def update_os():
-    ###FIXME###
-    print "updating OS"
-
-
 def draw_cell(widget, cell):
     if widget.pressed:
         widget.fill(widget.style.button_pressed_color)
@@ -115,7 +101,38 @@ class CellSettings(gui.MessageBox):
             pass
         super(CellSettings, self).close(label)
 
+class UpdateBox(gui.Dialog):
+    def __init__(self):
+        super(UpdateBox, self).__init__((20, 20), (280, 160), "topleft")
+        self.message = gui.StaticText((140,80),(280,60),"center",label="Updating OS...", parent=self)
+        self.upgrade_thread = threading.Thread(target=self.upgrade)
+        self.upgrade_thread.start()
+        self.monitor = self.create_timer(self.upgrade_monitor, seconds=0.3)
+        self.update(downwards=True)
 
+    def upgrade(self):
+        self.result = subprocess.call(['/usr/bin/tbupgrade','--yes'])
+
+    def upgrade_monitor(self):
+        if not self.upgrade_thread.is_alive():
+             self.monitor.stop()
+             if self.result == 0:
+                 #probably should not get here...
+                 self.message.label = "Upgrade successful. Restarting..."
+                 self.create_timer(self.restart, seconds=1.0, repeating=False)
+                 self.update(downwards=True)
+             elif self.result == 2:
+                 self.message.label = "Upgrade not needed"
+                 self.create_timer(lambda: self.close(None), seconds=1.0, repeating=False)
+                 self.update(downwards=True)
+             else:
+                 self.message.label = "Error: " + str(self.result)
+                 self.create_timer(lambda: self.close(None), seconds=1.0, repeating=False)
+                 self.update(downwards=True)
+
+    def restart(self):
+        exit(0)
+    
 class Settings(gui.Dialog):
     # we're using a ScrollArea here in order to do the animation bit
     # but we need to alter it's functionality slightly
@@ -167,7 +184,7 @@ class Settings(gui.Dialog):
                                            text_align="left")
         self.update_label.visible = False
         self.update_button = gui.Button((313, 59 + i*32), (120, 27), align="right", style=style14,
-                                        parent=self.panel, label="Update Now", callback=update_os)
+                                        parent=self.panel, label="Update Now", callback=self.do_upgrade)
         self.update_button.visible = False
         self.update(downwards=True)
 
@@ -189,9 +206,10 @@ class Settings(gui.Dialog):
             if e.returncode == 2:
                  self.newer_version = False
         try:
-            self.installed = re.search('Installed Version:\s*(\d+.\d+.\d+)',info).group(1)
-            self.latest = re.search('Latest Version:\s*(\d+.\d+.\d+)',info).group(1)
+            self.installed = re.search('Installed version:\s*(\d+.\d+.\d+)',info).group(1)
+            self.latest = re.search('Latest version:\s*(\d+.\d+.\d+)',info).group(1)
         except AttributeError:
+            print info
             self.installed = "Error"
             self.latest = "Error"
 
@@ -216,3 +234,6 @@ class Settings(gui.Dialog):
             self.update(downwards=True)
         if self.version_checker is None and self.cell_finder is None:
             self.thread_checker.stop()
+
+    def do_upgrade(self):
+        UpdateBox().run()
