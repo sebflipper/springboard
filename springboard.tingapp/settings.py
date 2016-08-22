@@ -140,6 +140,10 @@ class Settings(gui.Dialog):
     def __init__(self, callback=None, style=None):
         super(Settings, self).__init__((0, 0), (320, 200), "topleft",
                                        style=style, callback=callback, transition="slide_down")
+
+        self.style.button_text_font = "OpenSans-Semibold.ttf"
+        self.style.statictext_font = "OpenSans-Semibold.ttf"
+
         style14 = self.style.copy(statictext_font_size=14, button_text_font_size=14)
         gui.StaticText((160, 23), (100, 20), parent=self.panel, style=style14, label="Settings")
         # add widgets
