@@ -131,10 +131,10 @@ def loop():
         joystick_img = 'Gamepad-1.png'
     else:
         joystick_img = 'Gamepad-2.png'
-    screen.image(iconise(state['network']), xy=(309, 0), align='top')
-    screen.image(iconise(joystick_img), xy=(298, 0), align='topright')
-    screen.image(iconise(mouse_img), xy=(277, 0), align='topright')
-    screen.image(iconise(kbd_img), xy=(266, 0), align='topright')
+    screen.image(iconise(state['network']), xy=(300, 7), align='top')
+    screen.image(iconise(joystick_img), xy=(289, 7), align='topright')
+    screen.image(iconise(mouse_img), xy=(268, 7), align='topright')
+    screen.image(iconise(kbd_img), xy=(257, 7), align='topright')
     draw_dots()
 
     scroll_position = state['scroll_position']
