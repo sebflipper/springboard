@@ -93,7 +93,7 @@ def draw_dots():
 
 def background_color():
     # TODO: get background color from apps, fade when scroll position is between
-    return (127, 219, 255)
+    return (0, 116, 217)
 
 class PeripheralFinder():
     def __init__(self, delay=0.5):
