@@ -1,0 +1,2 @@
+tingbot-gui>=0.1
+wifi==0.3.8
