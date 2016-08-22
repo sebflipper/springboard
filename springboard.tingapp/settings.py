@@ -137,12 +137,13 @@ class UpdateBox(gui.Dialog):
 class Settings(gui.Dialog):
     # we're using a ScrollArea here in order to do the animation bit
     # but we need to alter it's functionality slightly
-    def __init__(self, callback=None, style=None):
+    def __init__(self, background_color=(0,0,0), callback=None, style=None):
         super(Settings, self).__init__((0, 0), (320, 200), "topleft",
                                        style=style, callback=callback, transition="slide_down")
 
         self.style.button_text_font = "OpenSans-Semibold.ttf"
         self.style.statictext_font = "OpenSans-Semibold.ttf"
+        self.style.bg_color = background_color
 
         style14 = self.style.copy(statictext_font_size=14, button_text_font_size=14)
         gui.StaticText((160, 23), (100, 20), parent=self.panel, style=style14, label="Settings")

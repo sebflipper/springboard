@@ -45,7 +45,12 @@ def button_right():
 @touch((0, 0), (320, 30), "topleft")
 def on_show_settings(action):
     if action == 'down':
-        Settings().run()
+        # get the color of the screen currently
+        color = background_color()
+        # darken that by 40%
+        color = tuple(c*0.6 for c in color)
+        # run the settings pane modally
+        Settings(background_color=color).run()
 
 @touch((0, 30), (320, 210), "topleft")
 def on_touch(action):
@@ -86,6 +91,10 @@ def draw_dots():
             align='left'
         )
 
+def background_color():
+    # TODO: get background color from apps, fade when scroll position is between
+    return (127, 219, 255)
+
 class PeripheralFinder():
     def __init__(self, delay=0.5):
         self.stopping = False
@@ -103,7 +112,7 @@ class PeripheralFinder():
         self.stopping = True
 
 def loop():
-    screen.fill(color='teal')
+    screen.fill(color=background_color())
 
     screen.image(
         'tingbot-t.png',
