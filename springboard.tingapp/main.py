@@ -157,5 +157,5 @@ def loop():
 finder = PeripheralFinder(1.0)
 try:
     tingbot.run(loop)
-except SystemExit:
+finally:
     finder.stop()
