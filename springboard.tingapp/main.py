@@ -8,16 +8,6 @@ import os, logging, math, subprocess, json
 
 from icon_utils import iconise, get_network_icon_name
 
-def image_with_text(string, color='grey', font=None, font_size=32, antialias=None):
-    from tingbot.graphics import _font, _color
-    font, antialias = _font(font, font_size, antialias)
-    string = unicode(string)
-
-    if antialias is None:
-        antialias
-
-    return Image(surface=font.render(string, antialias, _color(color)))
-
 apps_dir = os.environ.get('APPS_DIR', '/apps')
 apps = []
 
