@@ -138,7 +138,7 @@ class Settings(gui.Dialog):
     # we're using a ScrollArea here in order to do the animation bit
     # but we need to alter it's functionality slightly
     def __init__(self, background_color=(0,0,0), callback=None, style=None):
-        super(Settings, self).__init__((0, 0), (320, 200), "topleft",
+        super(Settings, self).__init__((0, 0), (320, 206), "topleft",
                                        style=style, callback=callback, transition="slide_down")
 
         self.style.button_text_font = "OpenSans-Semibold.ttf"
