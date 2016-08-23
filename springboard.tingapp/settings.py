@@ -17,7 +17,7 @@ def draw_cell(widget, cell):
         widget.fill(widget.style.button_pressed_color)
     else:
         widget.fill(widget.style.popup_bg_color)
-    if isinstance(cell, wifi.Cell) or isinstance(cell, tingbot.hardware.WifiCell):
+    if hasattr(cell, 'ssid'):
         label = cell.ssid
         widget.image(iconise(get_network_icon_name(cell)),
                      xy=(widget.size[0]-5, widget.size[1] / 2),
