@@ -109,7 +109,7 @@ def draw_dots():
 
 def background_color():
     # TODO: get background color from apps, fade when scroll position is between
-    return (0, 116, 217)
+    return (20, 20, 20)
 
 def loop():
     screen.fill(color=background_color())
