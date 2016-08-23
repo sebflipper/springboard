@@ -2,6 +2,7 @@ import socket
 import threading
 import subprocess
 import re
+import math
 
 import wifi
 import pygame
@@ -245,3 +246,73 @@ class Settings(gui.Dialog):
 
     def do_upgrade(self):
         UpdateBox().run()
+
+    def animation_easing(self, number, towards):
+        # TODO remove when added to tingbot-gui
+        '''
+        Returns the amount to change 'number' for a frame of animation. If animation should
+        stop, return 0.
+        '''
+        change = int(towards - number) * 0.15
+
+        # always round away from zero to prevent the animation getting stuck when fractional
+        # changes are calculated
+        if change > 0:
+            return math.ceil(change)
+        else:
+            return math.floor(change)
+
+    def animate(self):
+        # TODO remove when added to tingbot-gui
+        if self.transition=="slide_down":
+            change = self.animation_easing(self.panel_pos[1], towards=0)
+            self.panel_pos[1] += change
+            self.bg_pos[1] += change
+        elif self.transition=="slide_up":
+            change = self.animation_easing(self.panel_pos[1] + self.panel.size[1], towards=240)
+            self.panel_pos[1] += change
+            self.bg_pos[1] += change
+        elif self.transition=="slide_right":
+            change = self.animation_easing(self.panel_pos[0], towards=0)
+            self.panel_pos[0] += change
+            self.bg_pos[0] += change
+        elif self.transition=="slide_left":
+            change = self.animation_easing(self.panel_pos[0] + self.panel.size[0], towards=320)
+            self.panel_pos[0] += change
+            self.bg_pos[0] += change
+        if change==0:
+            self.animate_timer.stop()
+
+        self.update()
+
+    def deanimate(self):
+        # TODO remove when added to tingbot-gui
+        if self.transition=="slide_down":
+            change = self.animation_easing(self.bg_pos[1], towards=0)
+            self.panel_pos[1] += change
+            self.bg_pos[1] += change
+        elif self.transition=="slide_up":
+            change = self.animation_easing(self.bg_pos[1], towards=0)
+            self.panel_pos[1] += change
+            self.bg_pos[1] += change
+        elif self.transition=="slide_right":
+            change = self.animation_easing(self.bg_pos[0], towards=0)
+            self.panel_pos[0] += change
+            self.bg_pos[0] += change
+        elif self.transition=="slide_left":
+            change = self.animation_easing(self.bg_pos[0], towards=0)
+            self.panel_pos[0] += change
+            self.bg_pos[0] += change
+        self.update()
+        if change == 0:
+            self.deanimate_timer.stop()
+            self.close_final()
+
+    def draw(self):
+        # TODO remove when added to tingbot-gui
+        if self.transition=="popup":
+            return
+        else:
+            self.surface.blit(self.panel.surface,self.panel_pos)
+            self.surface.blit(self.screen_copy,self.bg_pos)  
+            tingbot.screen.needs_update = True
