@@ -8,6 +8,26 @@ import os, logging, math, subprocess, json
 
 from icon_utils import iconise, get_network_icon_name
 
+class PeripheralFinder():
+    def __init__(self, delay=0.5):
+        self.stopping = False
+        self.mouse_attached = False
+        self.keyboard_attached = False
+        self.joystick_attached = False
+        self.network_icon = 'WiFi-1.png'
+        Timer(delay, self.find_peripherals).start()
+
+    def find_peripherals(self):  # all off these assignments are atomic, so are thread safe.
+        if not self.stopping:
+            self.mouse_attached = mouse_attached()
+            self.keyboard_attached = keyboard_attached()
+            self.joystick_attached = joystick_attached()
+            self.network_icon = get_network_icon_name(get_wifi_cell())
+            Timer(0.5, self.find_peripherals).start()
+
+    def stop(self):
+        self.stopping = True
+
 apps_dir = os.environ.get('APPS_DIR', '/apps')
 apps = []
 
@@ -21,10 +41,6 @@ for filename in os.listdir(apps_dir):
 state = {
     'app_index': 0,
     'scroll_position': 0,
-    'mouse': False,
-    'keyboard': False,
-    'joystick': False,
-    'network': 'WiFi-1.png',
 }
 
 @left_button.press
@@ -95,22 +111,6 @@ def background_color():
     # TODO: get background color from apps, fade when scroll position is between
     return (0, 116, 217)
 
-class PeripheralFinder():
-    def __init__(self, delay=0.5):
-        self.stopping = False
-        Timer(delay, self.find_peripherals).start()
-
-    def find_peripherals(self):  # all off these assignments are atomic, so are thread safe.
-        if not self.stopping:
-            state['mouse'] = mouse_attached()
-            state['keyboard'] = keyboard_attached()
-            state['joystick'] = joystick_attached()
-            state['network'] = get_network_icon_name(get_wifi_cell())
-            Timer(0.5, self.find_peripherals).start()
-
-    def stop(self):
-        self.stopping = True
-
 def loop():
     screen.fill(color=background_color())
 
@@ -119,19 +119,19 @@ def loop():
         xy=(10, 7),
         align='topleft',
     )
-    if state['mouse']:
+    if finder.mouse_attached:
         mouse_img = 'Mouse-1.png'
     else:
         mouse_img = 'Mouse-2.png'
-    if state['keyboard']:
+    if finder.keyboard_attached:
         kbd_img = 'Keyboard-1.png'
     else:
         kbd_img = 'Keyboard-2.png'
-    if state['joystick']:
+    if finder.joystick_attached:
         joystick_img = 'Gamepad-1.png'
     else:
         joystick_img = 'Gamepad-2.png'
-    screen.image(iconise(state['network']), xy=(300, 7), align='top')
+    screen.image(iconise(finder.network_icon), xy=(300, 7), align='top')
     screen.image(iconise(joystick_img), xy=(289, 7), align='topright')
     screen.image(iconise(mouse_img), xy=(268, 7), align='topright')
     screen.image(iconise(kbd_img), xy=(257, 7), align='topright')
