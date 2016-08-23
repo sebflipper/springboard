@@ -42,7 +42,7 @@ def button_right():
         state['scroll_position'] += 0.02  # little nudge animation
 
 
-@touch((0, 0), (320, 30), "topleft")
+@touch(size=(320, 55), align="top")
 def on_show_settings(action):
     if action == 'down':
         # get the color of the screen currently
@@ -52,7 +52,7 @@ def on_show_settings(action):
         # run the settings pane modally
         Settings(background_color=color).run()
 
-@touch((0, 30), (320, 210), "topleft")
+@touch(size=(320, 240-55), align="bottom")
 def on_touch(action):
     if action == 'down':
         app = apps[state['app_index']]
