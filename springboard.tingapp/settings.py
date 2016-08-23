@@ -145,6 +145,8 @@ class Settings(gui.Dialog):
         self.style.statictext_font = "OpenSans-Semibold.ttf"
         self.style.bg_color = background_color
 
+        self.animate_timer.period = 1.0/30
+
         style14 = self.style.copy(statictext_font_size=14, button_text_font_size=14)
         gui.StaticText((160, 23), (100, 20), parent=self.panel, style=style14, label="Settings")
         # add widgets
