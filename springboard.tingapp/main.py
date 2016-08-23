@@ -87,7 +87,7 @@ def draw_app_at_index(app_i, scroll_position):
 
     draw_x = -(scroll_position - app_i)*320 + 160
     app = apps[int(app_i)]
-    app.draw(surface=screen, centered_at=(draw_x, 100))
+    app.draw(surface=screen, centered_at=(draw_x, 102))
 
 def draw_dots():
     num_apps = len(apps)
@@ -103,7 +103,7 @@ def draw_dots():
 
         screen.image(
             image,
-            xy=(start_x + app_i*10, 230),
+            xy=(start_x + app_i*10, 227),
             align='left'
         )
 
@@ -131,10 +131,10 @@ def loop():
         joystick_img = 'Gamepad-1.png'
     else:
         joystick_img = 'Gamepad-2.png'
-    screen.image(iconise(finder.network_icon), xy=(300, 7), align='top')
-    screen.image(iconise(joystick_img), xy=(289, 7), align='topright')
-    screen.image(iconise(mouse_img), xy=(268, 7), align='topright')
-    screen.image(iconise(kbd_img), xy=(257, 7), align='topright')
+    screen.image(iconise(finder.network_icon), xy=(300, 6), align='top')
+    screen.image(iconise(joystick_img), xy=(289, 6), align='topright')
+    screen.image(iconise(mouse_img), xy=(268, 6), align='topright')
+    screen.image(iconise(kbd_img), xy=(257, 6), align='topright')
     draw_dots()
 
     scroll_position = state['scroll_position']

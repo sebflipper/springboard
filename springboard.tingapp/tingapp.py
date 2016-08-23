@@ -64,6 +64,6 @@ class TingApp(object):
             )
         surface.image(
             self.name_image,
-            xy=(centered_at[0], centered_at[1]+57),
+            xy=(centered_at[0], centered_at[1]+58),
             align='top',
         )
