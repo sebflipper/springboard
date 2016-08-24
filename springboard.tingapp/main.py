@@ -62,7 +62,7 @@ def button_right():
 def on_show_settings(action):
     if action == 'down':
         # get the color of the screen currently
-        color = background_color()
+        color = background_color(state['scroll_position'])
         # darken that by 40%
         color = tuple(c*0.6 for c in color)
         # run the settings pane modally
@@ -110,12 +110,38 @@ def draw_dots():
             align='left'
         )
 
-def background_color():
-    # TODO: get background color from apps, fade when scroll position is between
-    return (20, 20, 20)
+def background_color(scroll_position):
+    left_i = int(math.floor(scroll_position))
+    right_i = int(math.ceil(scroll_position))
+
+    # clamp these indicies to be within the bounds of the list
+    left_i = max(left_i, 0)
+    right_i = max(right_i, 0)
+    left_i = min(left_i, len(apps) - 1)
+    right_i = min(right_i, len(apps) - 1)
+
+    left_color = apps[left_i].background_color
+    right_color = apps[right_i].background_color
+
+    if left_i == right_i:
+        return left_color
+
+    left_amount = 1 - (scroll_position - left_i)
+    right_amount = 1 - (right_i - scroll_position)
+
+    color = (
+        left_color[0] * left_amount + right_color[0] * right_amount,
+        left_color[1] * left_amount + right_color[1] * right_amount,
+        left_color[2] * left_amount + right_color[2] * right_amount,
+    )
+
+    return color
 
 def loop():
-    screen.fill(color=background_color())
+    scroll_position = state['scroll_position']
+    app_index = state['app_index']
+
+    screen.fill(color=background_color(scroll_position))
 
     screen.image(
         'tingbot-t.png',
@@ -140,8 +166,6 @@ def loop():
     screen.image(iconise(kbd_img), xy=(257, 6), align='topright')
     draw_dots()
 
-    scroll_position = state['scroll_position']
-    app_index = state['app_index']
     scroll_position += (app_index-scroll_position)*0.2
 
     if math.floor(scroll_position) != math.ceil(scroll_position):
