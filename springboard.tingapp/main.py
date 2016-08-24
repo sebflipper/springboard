@@ -179,8 +179,23 @@ def loop():
 
     state['scroll_position'] = scroll_position
 
-# run the app
+
 finder = PeripheralFinder(1.0)
+
+# To debug performance, add 'pyinstrument' to the requirements.txt and
+# set this variable to True.
+profiling = False
+
+if profiling:
+    import pyinstrument
+    p = pyinstrument.Profiler()
+    p.start()
+
+    @once(seconds=20)
+    def stop_profiler():
+        p.stop()
+        print p.output_text(color=True)
+
 try:
     tingbot.run(loop)
 finally:
