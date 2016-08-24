@@ -89,6 +89,9 @@ def draw_app_at_index(app_i, scroll_position):
     app = apps[int(app_i)]
     app.draw(surface=screen, centered_at=(draw_x, 102))
 
+dot_selected_image = Image.load('dot-selected.png')
+dot_image = Image.load('dot.png')
+
 def draw_dots():
     num_apps = len(apps)
 
@@ -97,9 +100,9 @@ def draw_dots():
 
     for app_i in range(len(apps)):
         if app_i == state['app_index']:
-            image = 'dot-selected.png'
+            image = dot_selected_image
         else:
-            image = 'dot.png'
+            image = dot_image
 
         screen.image(
             image,
