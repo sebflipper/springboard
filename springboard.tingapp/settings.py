@@ -18,6 +18,9 @@ default_style.button_text_font = "OpenSans-Semibold.ttf"
 default_style.statictext_font = "OpenSans-Semibold.ttf"
 default_style.statictext_font_size = 14
 default_style.button_text_font_size = 14
+default_style.button_pressed_color = (255, 255, 255, 100)
+default_style.button_color = (255, 255, 255)
+default_style.popup_bg_color = (255, 255, 255, 50)
 
 def draw_cell(widget, cell):
     if widget.pressed:
