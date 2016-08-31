@@ -3,6 +3,8 @@
 # glenn@sensepost.com / @glennzw
 # Handle wireless networking from Python
 # The name (evil.py) is a play on 'wicd'
+# slightly modified by beardydoc@gmail.com to raise errors
+# when something bad happens
 from subprocess import Popen, call, PIPE
 import errno
 from types import *
@@ -37,6 +39,9 @@ True
 
 """
 
+class EvilError(Exception):
+    pass
+
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(levelname)s %(filename)s: %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
@@ -60,15 +65,14 @@ def run_program(rcmd):
         response_stdout, response_stderr = response[0], response[1]
     except OSError, e:
         if e.errno == errno.ENOENT:
-            logging.debug( "Unable to locate '%s' program. Is it in your path?" % executable )
+            raise EvilError( "Unable to locate '%s' program. Is it in your path?" % executable )
         else:
-            logging.error( "O/S error occured when trying to run '%s': \"%s\"" % (executable, str(e)) )
+            raise EvilError( "O/S error occured when trying to run '%s': \"%s\"" % (executable, str(e)) )
     except ValueError, e:
-        logging.debug( "Value error occured. Check your parameters." )
+        raise EvilError( "Value error occured. Check your parameters." )
     else:
         if proc.wait() != 0:
-            logging.debug( "Executable '%s' returned with the error: \"%s\"" %(executable,response_stderr) )
-            return response
+            raise EvilError( "Executable '%s' returned with the error: \"%s\"" %(executable,response_stderr) )
         else:
             logging.debug( "Executable '%s' returned successfully. First line of response was \"%s\"" %(executable, response_stdout.split('\n')[0] ))
             return response_stdout
@@ -170,76 +174,3 @@ def do_dhcp(_iface):
     """
     run_program("dhclient %s" % _iface)
 
-
-def main():
-    print "[--- EViL. Python wireless network manager. ---]"
-    print "[        glenn@sensepost.com / @glennzw\n"
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-n","--nics", help="List wireless network interfaces.", action="store_true")
-    parser.add_argument("-l","--list", help="List wireless networks (specify adapter).", action="store_true")
-    parser.add_argument("-i","--iface", help="Specify interface.")
-    parser.add_argument("-c","--connect", help="Connect to network.", action="store_true")
-    parser.add_argument("-s","--ssid", help="Specify SSID")
-    parser.add_argument("-t","--type", help="Specify network type (OPEN, WEP, WPA, WPA2)")
-    parser.add_argument("-p","--passw", help="Specify password or key.")
-    args = parser.parse_args()
-
-    if len(sys.argv) < 2:
-        print "[!] No options supplied. Try --help."
-        sys.exit(-1)
-
-    if args.nics:
-        nics = get_wnics()
-        if nics:
-            print "[+] Available NICs:"
-            for nic in get_wnics():
-                print nic
-        else:
-            print "[W] No wireless interfaces found :-("
-    elif args.list:
-        if not args.iface:
-            print "[!] Please specify interface. Use --help for help."
-            sys.exit(-1)
-        else:
-            if args.iface not in get_wnics():
-                print "[E] Bad interface! - '%s'" % args.iface
-                sys.exit(-1)
-            print "[+] Searching for available networks..."
-            start_wpa(args.iface)
-            networks = get_networks(args.iface)
-            if networks:
-                networks = sorted(networks, key=lambda k: k['sig']) 
-                print "[+] Networks in range:"
-                for network in networks:
-                    print " SSID:\t%s" % network['ssid']
-                    print " Sig:\t%s" % network['sig']
-                    print " BSSID:\t%s" % network['bssid']
-                    print " Flags:\t%s" % network['flag']
-                    print " Freq:\t%s\n" % network['freq']
-            else:
-                print "[W] No wireless networks detected :-("
-    elif args.connect:
-        if not args.iface or not args.ssid or not args.type or (args.type != "OPEN" and not args.passw):
-            print "[E] Missing options for --connect. Check --help for assistance."
-            sys.exit(-1)
-        else:
-            sys.stdout.write( "[+] Associating to '%s' on '%s' (may take some time)... " % (args.ssid, args.iface))
-            sys.stdout.flush()
-            if args.iface not in get_wnics():
-                print "[E] No such wireless interface! - '%s'" % args.iface
-                sys.exit(-1)
-            start_wpa(args.iface)
-            connect_to_network(args.iface, args.ssid, args.type, args.passw)
-            while not is_associated(args.iface):
-                time.sleep(1)
-            print "Success."
-            sys.stdout.write("[+] Requesting DHCP lease... ")
-            sys.stdout.flush()
-            do_dhcp(args.iface)
-            while not has_ip(args.iface):
-                time.sleep(1)
-            print "Success. (%s)" % has_ip(args.iface)
-            print "[+] Associated and got lease. Hoorah."
-
-if __name__ == "__main__":
-    main()
