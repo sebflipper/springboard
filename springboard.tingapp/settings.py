@@ -4,11 +4,13 @@ import subprocess
 import re
 import math
 
-import wifi
 import pygame
 import tingbot
 import tingbot_gui as gui
+
 from icon_utils import get_network_icon_name, iconise
+import wifi
+import evil
 
 IFACE = 'wlan0'
 
@@ -22,10 +24,15 @@ def draw_cell(widget, cell):
         widget.image(iconise(get_network_icon_name(cell)),
                      xy=(widget.size[0]-5, widget.size[1] / 2),
                      align="right")
-        if hasattr(cell, 'encrypted') and cell.encrypted:
-            widget.image(iconise("Lock-1.png"),
-                         xy=(widget.size[0]-23, widget.size[1] / 2),
-                         align="right")
+        if (cell.type in ('WPA2','WPA','WEP')) or (cell.known and cell.passphrase):
+            if cell.known:
+                widget.image(iconise("Unlock-1.png"),
+                             xy=(widget.size[0]-23, widget.size[1] / 2),
+                             align="right")
+            else:
+                widget.image(iconise("Lock-1.png"),
+                             xy=(widget.size[0]-23, widget.size[1] / 2),
+                             align="right")
     else:
         label = cell
     widget.text(label,
@@ -53,13 +60,19 @@ class CellDropDown(gui.DropDown):
 
 class CellSettings(gui.MessageBox):
     def __init__(self, cell, style=None):
+        buttons = []
+        if cell.present:
+            buttons += ['Connect']
+        if cell.known:
+            buttons += ['Forget']
+        buttons += ['Cancel']    
+        
         super(CellSettings, self).__init__((20, 20), (280, 160), "topleft", style=style,
-                                           buttons=['Connect', 'Forget', 'Cancel'])
+                                           buttons=buttons)
         gui.StaticText((140, 0), (100, 30), "top", parent=self.panel, label=cell.ssid)
         self.cell = cell
-        self.scheme = wifi.Scheme.find(IFACE, cell.ssid)
-        if cell.encrypted:
-            if self.scheme:
+        if cell.type in ("WPA","WPA2","WEP"):
+            if cell.passphrase:
                 pwd = "        "
             else:
                 pwd = ""
@@ -71,32 +84,17 @@ class CellSettings(gui.MessageBox):
             self.password = None
 
     def close(self, label):
-        if label == "Connect":
-            if (self.scheme is None) or (self.password and self.password.string != "        "):
-                if self.scheme:
-                    self.scheme.delete()
-                if self.password:
-                    self.scheme = wifi.Scheme.for_cell(interface=IFACE,
-                                                       name=self.cell.ssid,
-                                                       cell=self.cell,
-                                                       passkey=self.password.string)
-                else:
-                    self.scheme = wifi.Scheme.for_cell(interface=IFACE,
-                                                       name=self.cell.ssid,
-                                                       cell=self.cell)
-                try:
-                    self.scheme.save()
-                except IOError:
-                    gui.message_box(message="Not allowed to change network")
+        if label == "Connect": # self.present must be true
+            if self.password and self.password.string != "        ":
+                self.cell.passphrase = self.password.string
             try:
-                self.scheme.activate()
-            except wifi.exceptions.ConnectionError:
+                wifi.connect(IFACE,self.cell)
+            except evil.EvilError as e:
                 gui.message_box(message="Incorrect Password")
-            except IOError:
-                gui.message_box(message="Not allowed to change network")
-        elif label == "Forget":
-            if self.scheme:
-                self.scheme.delete()
+            else:
+                wifi.save_cell(self.cell)
+        elif label == "Forget": # self.known must be true
+            wifi.delete_cell(self.cell)
         elif label == "Cancel":
             # do nothing
             pass
@@ -162,7 +160,7 @@ class Settings(gui.Dialog):
             self.version_checker.start()
             self.thread_checker = self.create_timer(self.check_threads, seconds=0.3)
             if self.current_cell:
-                cell_list = [self.current_cell]
+                cell_list = [self.current_cell.ssid]
             else:
                 cell_list = ["Scanning..."]
             gui.StaticText((16, 59 + i*32), (120, 27), align="left", style=style14,
@@ -174,11 +172,11 @@ class Settings(gui.Dialog):
                                               values=cell_list)
             i += 1
         # show IP address
-        ip_addr = tingbot.get_ip_address() or "No connection"
         gui.StaticText((16, 59 + i*32), (120, 27), align="left", style=style14,
                        parent=self.panel, label="IP Address:", text_align="left")
-        gui.StaticText((304, 59 + i*32), (153, 27), align="right", style=style14,
-                       parent=self.panel, label=ip_addr, text_align="right")
+        self.ip_label = gui.StaticText((304, 59 + i*32), (153, 27), align="right", style=style14,
+                                       parent=self.panel, label="", text_align="right")
+        self.show_ip_address()
         i += 1
         # show tingbot version
         gui.StaticText((16, 59 + i*32), (120, 27), align="left", style=style14,
@@ -196,18 +194,28 @@ class Settings(gui.Dialog):
                                         parent=self.panel, label="Update Now", callback=self.do_upgrade)
         self.update_button.visible = False
         self.update(downwards=True)
+        
+    def show_ip_address(self):
+        self.ip_label.label = tingbot.get_ip_address() or "No connection"
+        self.ip_label.update()
 
     def wifi_selected(self, name, cell):
-        CellSettings(cell, self.style).run()
+        if cell:
+            try:
+                CellSettings(cell, self.style).run()
+                self.find_cells()
+            except evil.EvilError as e:
+                gui.msgbox(str(e))
+            self.show_ip_address()
+            self.update_cell_dropdown()
 
     def find_cells(self):
-        try:
-            self.cells = wifi.Cell.all(IFACE)
-        except wifi.exceptions.InterfaceError:
-            self.cells = []
+        self.cells = wifi.find_networks(IFACE)
 
     def check_versions(self):
         self.newer_version = True
+        self.installed = "Error"
+        self.latest = "Error"
         try:
             info = subprocess.check_output(['/usr/bin/tbupgrade', '--check-only'])
         except subprocess.CalledProcessError as e:
@@ -219,20 +227,23 @@ class Settings(gui.Dialog):
             self.latest = re.search('Latest version:\s*(\d+.\d+.\d+)', info).group(1)
         except AttributeError:
             print info
-            self.installed = "Error"
-            self.latest = "Error"
+            
+    def update_cell_dropdown(self):
+            cell_list = [(x, x) for x in self.cells]
+            if cell_list:
+                if not any(x.connected for x in self.cells):
+                    cell_list = [("Select network", None)] + cell_list
+            else:
+                cell_list = [("No wifi signals", None)]
+            self.cell_dropdown.values = cell_list
+            self.cell_dropdown.callback = self.wifi_selected
+            self.cell_dropdown.selected = cell_list[0]
+            self.cell_dropdown.update(downwards=True)
 
     def check_threads(self):
         if self.cell_finder and not self.cell_finder.is_alive():
-            cell_list = [(x, x) for x in self.cells]
-            self.cell_dropdown.values = cell_list
-            self.cell_dropdown.callback = self.wifi_selected
-            if cell_list:
-                self.cell_dropdown.selected = cell_list[0]
-            else:
-                self.cell_dropdown.selected = ("No wifi signals", None)
+            self.update_cell_dropdown()
             self.cell_finder = None
-            self.update(downwards=True)
         if self.version_checker and not self.version_checker.is_alive():
             self.version_label.label = self.installed
             if self.newer_version:
