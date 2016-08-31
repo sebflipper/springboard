@@ -62,7 +62,7 @@ def button_right():
 def on_show_settings(action):
     if action == 'down':
         # get the color of the screen currently
-        color = background_color()
+        color = background_color(state['scroll_position'])
         # darken that by 40%
         color = tuple(c*0.6 for c in color)
         # run the settings pane modally
@@ -89,6 +89,9 @@ def draw_app_at_index(app_i, scroll_position):
     app = apps[int(app_i)]
     app.draw(surface=screen, centered_at=(draw_x, 102))
 
+dot_selected_image = Image.load('dot-selected.png')
+dot_image = Image.load('dot.png')
+
 def draw_dots():
     num_apps = len(apps)
 
@@ -97,9 +100,9 @@ def draw_dots():
 
     for app_i in range(len(apps)):
         if app_i == state['app_index']:
-            image = 'dot-selected.png'
+            image = dot_selected_image
         else:
-            image = 'dot.png'
+            image = dot_image
 
         screen.image(
             image,
@@ -107,12 +110,38 @@ def draw_dots():
             align='left'
         )
 
-def background_color():
-    # TODO: get background color from apps, fade when scroll position is between
-    return (20, 20, 20)
+def background_color(scroll_position):
+    left_i = int(math.floor(scroll_position))
+    right_i = int(math.ceil(scroll_position))
+
+    # clamp these indicies to be within the bounds of the list
+    left_i = max(left_i, 0)
+    right_i = max(right_i, 0)
+    left_i = min(left_i, len(apps) - 1)
+    right_i = min(right_i, len(apps) - 1)
+
+    left_color = apps[left_i].background_color
+    right_color = apps[right_i].background_color
+
+    if left_i == right_i:
+        return left_color
+
+    left_amount = 1 - (scroll_position - left_i)
+    right_amount = 1 - (right_i - scroll_position)
+
+    color = (
+        left_color[0] * left_amount + right_color[0] * right_amount,
+        left_color[1] * left_amount + right_color[1] * right_amount,
+        left_color[2] * left_amount + right_color[2] * right_amount,
+    )
+
+    return color
 
 def loop():
-    screen.fill(color=background_color())
+    scroll_position = state['scroll_position']
+    app_index = state['app_index']
+
+    screen.fill(color=background_color(scroll_position))
 
     screen.image(
         'tingbot-t.png',
@@ -137,8 +166,6 @@ def loop():
     screen.image(iconise(kbd_img), xy=(257, 6), align='topright')
     draw_dots()
 
-    scroll_position = state['scroll_position']
-    app_index = state['app_index']
     scroll_position += (app_index-scroll_position)*0.2
 
     if math.floor(scroll_position) != math.ceil(scroll_position):
@@ -152,8 +179,23 @@ def loop():
 
     state['scroll_position'] = scroll_position
 
-# run the app
+
 finder = PeripheralFinder(1.0)
+
+# To debug performance, add 'pyinstrument' to the requirements.txt and
+# set this variable to True.
+profiling = False
+
+if profiling:
+    import pyinstrument
+    p = pyinstrument.Profiler()
+    p.start()
+
+    @once(seconds=20)
+    def stop_profiler():
+        p.stop()
+        print p.output_text(color=True)
+
 try:
     tingbot.run(loop)
 finally:

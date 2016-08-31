@@ -14,6 +14,16 @@ import evil
 
 IFACE = 'wlan0'
 
+default_style = gui.get_default_style()
+
+default_style.button_text_font = "OpenSans-Semibold.ttf"
+default_style.statictext_font = "OpenSans-Semibold.ttf"
+default_style.statictext_font_size = 14
+default_style.button_text_font_size = 14
+default_style.button_pressed_color = (255, 255, 255, 100)
+default_style.button_color = (255, 255, 255)
+default_style.popup_bg_color = (255, 255, 255, 50)
+
 def draw_cell(widget, cell):
     if widget.pressed:
         widget.fill(widget.style.button_pressed_color)
@@ -140,14 +150,11 @@ class Settings(gui.Dialog):
         super(Settings, self).__init__((0, 0), (320, 206), "topleft",
                                        style=style, callback=callback, transition="slide_down")
 
-        self.style.button_text_font = "OpenSans-Semibold.ttf"
-        self.style.statictext_font = "OpenSans-Semibold.ttf"
         self.style.bg_color = background_color
 
         self.animate_timer.period = 1.0/30
 
-        style14 = self.style.copy(statictext_font_size=14, button_text_font_size=14)
-        gui.StaticText((160, 23), (100, 20), parent=self.panel, style=style14, label="Settings")
+        gui.StaticText((160, 23), (100, 20), parent=self.panel, label="Settings")
         # add widgets
         i = 0
         self.current_cell = tingbot.get_wifi_cell()
@@ -163,11 +170,10 @@ class Settings(gui.Dialog):
                 cell_list = [self.current_cell.ssid]
             else:
                 cell_list = ["Scanning..."]
-            gui.StaticText((16, 59 + i*32), (120, 27), align="left", style=style14,
+            gui.StaticText((16, 59 + i*32), (120, 27), align="left",
                            parent=self.panel, label="Wi-Fi Network:", text_align="left")
             self.cell_dropdown = CellDropDown((313, 59 + i*32), (153, 27),
                                               align="right",
-                                              style=style14,
                                               parent=self.panel,
                                               values=cell_list)
             i += 1
@@ -179,18 +185,18 @@ class Settings(gui.Dialog):
         self.show_ip_address()
         i += 1
         # show tingbot version
-        gui.StaticText((16, 59 + i*32), (120, 27), align="left", style=style14,
+        gui.StaticText((16, 59 + i*32), (120, 27), align="left",
                        parent=self.panel, label="Current version:", text_align="left")
-        self.version_label = gui.StaticText((304, 59 + i*32), (120, 27), align="right", style=style14,
+        self.version_label = gui.StaticText((304, 59 + i*32), (120, 27), align="right",
                                             parent=self.panel, label="", text_align="right")
         i += 1
         # add update button but do not show it
-        self.update_label = gui.StaticText((16, 59 + i*32), (120, 27), align="left", style=style14,
+        self.update_label = gui.StaticText((16, 59 + i*32), (120, 27), align="left",
                                            parent=self.panel,
                                            label="Update Available:",
                                            text_align="left")
         self.update_label.visible = False
-        self.update_button = gui.Button((313, 59 + i*32), (120, 27), align="right", style=style14,
+        self.update_button = gui.Button((313, 59 + i*32), (120, 27), align="right",
                                         parent=self.panel, label="Update Now", callback=self.do_upgrade)
         self.update_button.visible = False
         self.update(downwards=True)
