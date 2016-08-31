@@ -142,7 +142,7 @@ def connect_to_network(_iface, _ssid, _type, _pass=None):
                 run_program("wpa_cli -i %s set_network 0 auth_alg OPEN" % _iface)
                 run_program("wpa_cli -i %s set_network 0 key_mgmt NONE" % _iface)
             elif _type == "WPA" or _type == "WPA2":
-                run_program('wpa_cli -i %s set_network 0 psk "%s"' % (_iface,_pass))
+                run_program('wpa_cli -i %s set_network 0 psk \'"%s"\'' % (_iface,_pass))
             elif _type == "WEP":
                 run_program("wpa_cli -i %s set_network 0 wep_key %s" % (_iface,_pass))
             else:

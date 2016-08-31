@@ -178,9 +178,9 @@ class Settings(gui.Dialog):
                                               values=cell_list)
             i += 1
         # show IP address
-        gui.StaticText((16, 59 + i*32), (120, 27), align="left", style=style14,
+        gui.StaticText((16, 59 + i*32), (120, 27), align="left",
                        parent=self.panel, label="IP Address:", text_align="left")
-        self.ip_label = gui.StaticText((304, 59 + i*32), (153, 27), align="right", style=style14,
+        self.ip_label = gui.StaticText((304, 59 + i*32), (153, 27), align="right",
                                        parent=self.panel, label="", text_align="right")
         self.show_ip_address()
         i += 1

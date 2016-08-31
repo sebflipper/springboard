@@ -1,2 +1,1 @@
 https://github.com/furbrain/tingbot-gui/tarball/2ea952978b41e789fa1aa28b4cf6c064c60c88d9
-tingbot-python>=0.8.0

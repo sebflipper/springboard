@@ -6,6 +6,8 @@ import evil
 import tingbot
 
 NETWORK_INFO = '/boot/networks.json'
+TIMEOUT = 10
+
 
 @functools.total_ordering
 class Cell(object):
@@ -76,7 +78,8 @@ def save_cell(cell):
     with open(NETWORK_INFO, 'r') as f:
         json_cells = json.load(f)
     json_cells = [x for x in json_cells if x['ssid'] != cell.ssid]
-    json_cells += [{'ssid': cell.ssid, 'passphrase': cell.passphrase}]
+    if cell.passphrase:
+        json_cells += [{'ssid': cell.ssid, 'passphrase': cell.passphrase}]
     with open(NETWORK_INFO, 'w') as f:
         json.dump(json_cells,f)
         
@@ -89,10 +92,14 @@ def delete_cell(cell):
 
 def connect(iface, cell):
     evil.connect_to_network(iface, cell.ssid, cell.type, cell.passphrase)
-    while not evil.is_associated(iface):
+    for i in range(TIMEOUT):
+	if evil.is_associated(iface):
+            break
         time.sleep(1)
     evil.do_dhcp(iface)
-    while not evil.has_ip(iface):
+    for i in range(TIMEOUT):
+        if evil.has_ip(iface):
+            break
         time.sleep(1)
 
 
