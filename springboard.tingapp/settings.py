@@ -34,15 +34,10 @@ def draw_cell(widget, cell):
         widget.image(iconise(get_network_icon_name(cell)),
                      xy=(widget.size[0]-5, widget.size[1] / 2),
                      align="right")
-        if (cell.type in ('WPA2','WPA','WEP')) or (cell.known and cell.passphrase):
-            if cell.known:
-                widget.image(iconise("Unlock-1.png"),
-                             xy=(widget.size[0]-23, widget.size[1] / 2),
-                             align="right")
-            else:
-                widget.image(iconise("Lock-1.png"),
-                             xy=(widget.size[0]-23, widget.size[1] / 2),
-                             align="right")
+        if (cell.type in ('WPA2','WPA','WEP')):
+            widget.image(iconise("Lock-1.png"),
+                         xy=(widget.size[0]-23, widget.size[1] / 2),
+                         align="right")
     else:
         label = cell
     widget.text(label,
