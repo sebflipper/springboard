@@ -15,6 +15,7 @@ import time
 import argparse
 import re
 import shlex
+from pipes import quote
 
 SUPPLICANT_LOG_FILE = "wpa_supplicant.log"
 
@@ -137,19 +138,23 @@ def connect_to_network(_iface, _ssid, _type, _pass=None):
     _disconnect_all(_iface)
     time.sleep(1)
     if run_program("wpa_cli -i %s add_network" % _iface) == "0\n":
-        if run_program('wpa_cli -i %s set_network 0 ssid \'"%s"\'' % (_iface,_ssid)) == "OK\n":
+        if run_program('wpa_cli -i %s set_network 0 ssid %s' % (_iface,quote('"%s"'%_ssid))) == "OK\n":
             if _type == "OPEN":
                 run_program("wpa_cli -i %s set_network 0 auth_alg OPEN" % _iface)
                 run_program("wpa_cli -i %s set_network 0 key_mgmt NONE" % _iface)
             elif _type == "WPA" or _type == "WPA2":
-                run_program('wpa_cli -i %s set_network 0 psk \'"%s"\'' % (_iface,_pass))
+                run_program('wpa_cli -i %s set_network 0 psk %s' % (_iface,quote('"%s"'%_pass)))
             elif _type == "WEP":
-                run_program("wpa_cli -i %s set_network 0 wep_key %s" % (_iface,_pass))
+                run_program("wpa_cli -i %s set_network 0 wep_key %s" % (_iface,quote('"%s"'%_pass)))
             else:
                 logging.error("Unsupported type")
             
             run_program("wpa_cli -i %s select_network 0" % _iface)
-            
+        else:
+            raise EvilError('Failed to set_network')
+    else:
+        raise EvilError('Failed to add_network')
+
 def is_associated(_iface):
     """
     Check if we're associated to a network.
