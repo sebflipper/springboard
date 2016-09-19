@@ -66,9 +66,11 @@ class CellDropDown(gui.DropDown):
 class CellSettings(gui.MessageBox):
     def __init__(self, cell, style=None):
         buttons = []
+        stored_passphrase = wifi.stored_passphrase(cell.ssid)
+
         if cell.present:
             buttons += ['Connect']
-        if cell.known:
+        if stored_passphrase is not None:
             buttons += ['Forget']
         buttons += ['Cancel']    
         
@@ -76,11 +78,9 @@ class CellSettings(gui.MessageBox):
                                            buttons=buttons)
         gui.StaticText((140, 0), (100, 30), "top", parent=self.panel, label=cell.ssid)
         self.cell = cell
+
         if cell.type in ("WPA","WPA2","WEP"):
-            if cell.passphrase:
-                pwd = "        "
-            else:
-                pwd = ""
+            pwd = stored_passphrase or ""
             gui.StaticText((10, 55), (90, 30), "left", label="Password:",
                            style=style, parent=self.panel)
             self.password = gui.PasswordEntry((270, 55), (160, 30), "right", parent=self.panel,
@@ -90,16 +90,17 @@ class CellSettings(gui.MessageBox):
 
     def close(self, label):
         if label == "Connect": # self.present must be true
-            if self.password and self.password.string != "        ":
-                self.cell.passphrase = self.password.string
+            passphrase = ""
+            if self.password:
+                passphrase = self.password.string
+                
             try:
-                wifi.connect(IFACE,self.cell)
-            except evil.EvilError as e:
-                gui.message_box(message="Incorrect Password")
-            else:
-                wifi.save_cell(self.cell)
-        elif label == "Forget": # self.known must be true
-            wifi.delete_cell(self.cell)
+                wifi.connect(IFACE, self.cell, passphrase)
+            except (evil.EvilError, wifi.WifiError) as e:
+                print e
+                gui.message_box(message="Failed: %s" % e)
+        elif label == "Forget":
+            wifi.forget_cell(self.cell)
         elif label == "Cancel":
             # do nothing
             pass

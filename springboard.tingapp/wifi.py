@@ -1,12 +1,14 @@
 import functools
 import time
 import json
+import logging
+import subprocess
 
 import evil
 import tingbot
 
 NETWORK_INFO = '/boot/networks.json'
-TIMEOUT = 10
+TIMEOUT = 30
 
 
 @functools.total_ordering
@@ -14,13 +16,11 @@ class Cell(object):
     def __init__(self, ssid):
         self.ssid = ssid
         self.present = False
-        self.known = False
         self.connected = False
         self.signal = -1000
         self.type = None
-        self.passphrase = None
 
-    def load_from_evil(self,evil_cell):
+    def load_from_evil(self, evil_cell):
         self.present = True
         self.signal = int(evil_cell['sig'])
         if 'WPA2' in evil_cell['flag']:
@@ -31,14 +31,13 @@ class Cell(object):
             self.type = "WEP"
         else:
             self.type = "OPEN"
-        
 
     def load_from_json(self, cell):
         self.known = True
         self.passphrase = cell['passphrase']
         
     def _key(self):
-        return (self.connected,self.present,self.known,self.signal,self.ssid)
+        return (self.connected,self.present,self.signal,self.ssid)
         
     def __lt__(self,other):
         return self._key() > other._key()
@@ -47,59 +46,91 @@ class Cell(object):
         return self._key() == other._key()
         
     def __repr__(self):
-        return "[%s]: %s %s Signal: %d" % (self.ssid, 
-                                           ("Absent ","Present ")[self.present], 
-                                           ("Unknown","Known  ")[self.known],
-                                           self.signal)
+        return "[%s]: %s Signal: %d" % (self.ssid, 
+                                        ("Absent ","Present ")[self.present], 
+                                        self.signal)
+
+class WifiError(Exception):
+    pass
+
+def _networks_json():
+    try:
+        with open(NETWORK_INFO, 'r') as f:
+            return json.load(f)
+    except (IOError, TypeError, ValueError) as e:
+        logging.exception(e)
+        return []
+
+def _set_networks_json(networks):
+    with open(NETWORK_INFO, 'w') as f:
+        json.dump(networks, f)
+    
+def _save_cell(ssid, passphrase):
+    json_cells = _networks_json()
+
+    json_cells = [x for x in json_cells if x['ssid'] != ssid]
+
+    json_cells.insert(0, {'ssid': ssid, 'passphrase': passphrase})
+
+    _set_networks_json(json_cells)
+
+def _delete_cell(ssid):
+    json_cells = _networks_json()
+
+    json_cells = [x for x in json_cells if x['ssid'] != ssid]
+
+    _set_networks_json(json_cells)
 
 def find_networks(iface):
     evil_cells = evil.get_networks(iface) or []
-    try:
-        with open(NETWORK_INFO,'r') as f:
-            json_cells = json.load(f)
-    except (IOError, TypeError, ValueError):
-        json_cells = []
+
     networks = {}
+
     for x in evil_cells:
         ssid = x['ssid']
         networks[ssid] = Cell(ssid)
         networks[ssid].load_from_evil(x)
-    for x in json_cells:
-        ssid = x['ssid']
-        if ssid not in networks:
-            networks[ssid] = Cell(ssid)
-        networks[ssid].load_from_json(x)
+
     current_cell = tingbot.hardware.get_wifi_cell()
     if current_cell and current_cell.ssid in networks:
         networks[current_cell.ssid].connected = True
+
     return sorted(networks.values())
-    
-def save_cell(cell):
-    with open(NETWORK_INFO, 'r') as f:
-        json_cells = json.load(f)
-    json_cells = [x for x in json_cells if x['ssid'] != cell.ssid]
-    if cell.passphrase:
-        json_cells += [{'ssid': cell.ssid, 'passphrase': cell.passphrase}]
-    with open(NETWORK_INFO, 'w') as f:
-        json.dump(json_cells,f)
-        
-def delete_cell(cell):
-    with open(NETWORK_INFO, 'r') as f:
-        json_cells = json.load(f)
-    json_cells = [x for x in json_cells if x['ssid'] != cell.ssid]
-    with open(NETWORK_INFO, 'w') as f:
-        json.dump(json_cells,f)
 
-def connect(iface, cell):
-    evil.connect_to_network(iface, cell.ssid, cell.type, cell.passphrase)
-    for i in range(TIMEOUT):
-	if evil.is_associated(iface):
-            break
-        time.sleep(1)
-    evil.do_dhcp(iface)
-    for i in range(TIMEOUT):
-        if evil.has_ip(iface):
-            break
-        time.sleep(1)
+def stored_passphrase(ssid):
+    for network_dict in _networks_json():
+        if network_dict['ssid'] == ssid:
+            return network_dict['passphrase']
 
+    return None
 
+def connect(iface, cell, passphrase):
+    try:
+        evil.connect_to_network(iface, cell.ssid, cell.type, passphrase)
+
+        for i in range(TIMEOUT):
+            if evil.is_associated(iface):
+                break
+            if i == TIMEOUT - 1:
+                raise WifiError('Wifi association timeout')
+            time.sleep(1)
+
+        evil.do_dhcp(iface)
+
+        for i in range(TIMEOUT):
+            if evil.has_ip(iface):
+                break
+            if i == TIMEOUT - 1:
+                raise WifiError('DHCP timeout')
+            time.sleep(1)
+
+        # connection was successful, so let's save that to /boot/networks.json
+        _save_cell(cell.ssid, passphrase)
+        # update the wpa config file from /boot/networks.json
+        subprocess.check_call(['/usr/bin/tbwifisetup'])
+    finally:
+        # if connection was unsuccessful, this will reload previous configuration
+        subprocess.check_call(['/sbin/wpa_cli', 'reconfigure'])
+
+def forget_cell(ssid):
+    _delete_cell(ssid)
