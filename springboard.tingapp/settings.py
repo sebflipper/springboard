@@ -106,38 +106,73 @@ class CellSettings(gui.MessageBox):
             pass
         super(CellSettings, self).close(label)
 
+
 class UpdateBox(gui.Dialog):
     def __init__(self):
         super(UpdateBox, self).__init__((20, 20), (280, 160), "topleft")
-        self.message = gui.StaticText((160, 70), (280, 30), "center",
+
+        self.message = gui.StaticText((160, 70), (240, 30), "center",
                                       label="Updating OS...", parent=self)
+        self.log_header_text = gui.StaticText((160, 100), (240, 30), "center",
+                                              label="", parent=self)
+        self.log_text = gui.StaticText((160, 130), (240, 30), "center",
+                                       label="", parent=self)
+
+        self.latest_log_header = ''
+        self.latest_log = ''
+        self.result = None
         self.upgrade_thread = threading.Thread(target=self.upgrade)
         self.upgrade_thread.start()
-        self.monitor = self.create_timer(self.upgrade_monitor, seconds=0.3)
+        self.monitor = self.create_timer(self.upgrade_monitor, seconds=0.1)
         self.update(downwards=True)
 
     def upgrade(self):
-        self.result = subprocess.call(['/usr/bin/tbupgrade', '--yes'])
+        upgrade_process = subprocess.Popen(
+            ['/usr/bin/tbupgrade', '--yes'],
+            stdout=subprocess.PIPE,
+            universal_newlines=True)
+
+        log_header_re = re.compile(r'^tbupgrade: ([A-Za-z0-9].*)$')
+        log_re = re.compile(r'^(tbupgrade: |  )?([A-Za-z0-9].*)$')
+        
+        for line in iter(upgrade_process.stdout.readline, ''):
+            log_header_match = log_header_re.match(line)
+            if log_header_match:
+                self.latest_log_header = log_header_match.group(1)
+                self.latest_log = ''
+            else:
+                log_match = log_re.match(line)
+                if log_match:
+                    self.latest_log = log_match.group(2)
+
+        self.result = upgrade_process.wait()
 
     def upgrade_monitor(self):
-        if not self.upgrade_thread.is_alive():
+        if self.upgrade_thread.is_alive():
+            self.log_header_text.label = self.latest_log_header
+            self.log_text.label = self.latest_log
+            
+            self.update(downwards=True)
+        else:
+            self.log_header_text.label = ''
+            self.log_text.label = ''
             self.monitor.stop()
+            
             if self.result == 0:
-                # probably should not get here...
                 self.message.label = "Upgrade successful. Restarting..."
-                self.create_timer(self.restart, seconds=1.0, repeating=False)
-                self.update(downwards=True)
+                self.create_timer(self.restart, seconds=4.0, repeating=False)
             elif self.result == 2:
                 self.message.label = "Upgrade not needed"
-                self.create_timer(lambda: self.close(None), seconds=1.0, repeating=False)
-                self.update(downwards=True)
+                self.create_timer(lambda: self.close(None), seconds=4.0, repeating=False)
             else:
                 self.message.label = "Error: " + str(self.result)
-                self.create_timer(lambda: self.close(None), seconds=1.0, repeating=False)
-                self.update(downwards=True)
+                self.create_timer(lambda: self.close(None), seconds=4.0, repeating=False)
+            
+            self.update(downwards=True)
 
     def restart(self):
         exit(0)
+
 
 class Settings(gui.Dialog):
     # we're using a ScrollArea here in order to do the animation bit
