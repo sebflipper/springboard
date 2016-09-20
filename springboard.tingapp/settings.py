@@ -184,6 +184,7 @@ class Settings(gui.Dialog):
         self.style.bg_color = background_color
 
         self.animate_timer.period = 1.0/30
+        self.cells = []
 
         gui.StaticText((160, 23), (100, 20), parent=self.panel, label="Settings")
         # add widgets
