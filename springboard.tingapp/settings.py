@@ -109,7 +109,7 @@ class CellSettings(gui.MessageBox):
 class UpdateBox(gui.Dialog):
     def __init__(self):
         super(UpdateBox, self).__init__((20, 20), (280, 160), "topleft")
-        self.message = gui.StaticText((140, 80), (280, 60), "center",
+        self.message = gui.StaticText((160, 70), (280, 30), "center",
                                       label="Updating OS...", parent=self)
         self.upgrade_thread = threading.Thread(target=self.upgrade)
         self.upgrade_thread.start()
