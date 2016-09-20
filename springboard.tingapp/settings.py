@@ -162,7 +162,7 @@ class UpdateBox(gui.Dialog):
                 self.message.label = "Upgrade successful. Restarting..."
                 self.create_timer(self.restart, seconds=4.0, repeating=False)
             elif self.result == 2:
-                self.message.label = "Upgrade not needed"
+                self.message.label = "You're up to date!"
                 self.create_timer(lambda: self.close(None), seconds=4.0, repeating=False)
             else:
                 self.message.label = "Error: " + str(self.result)
