@@ -1,3 +1,4 @@
+import os
 import socket
 import threading
 import subprocess
@@ -24,6 +25,7 @@ default_style.button_pressed_color = (255, 255, 255, 100)
 default_style.button_color = (255, 255, 255)
 default_style.popup_bg_color = (255, 255, 255, 50)
 
+
 def draw_cell(widget, cell):
     if widget.pressed:
         widget.fill(widget.style.button_pressed_color)
@@ -34,7 +36,7 @@ def draw_cell(widget, cell):
         widget.image(iconise(get_network_icon_name(cell)),
                      xy=(widget.size[0]-5, widget.size[1] / 2),
                      align="right")
-        if (cell.type in ('WPA2','WPA','WEP')):
+        if (cell.type in ('WPA2', 'WPA', 'WEP')):
             widget.image(iconise("Lock-1.png"),
                          xy=(widget.size[0]-23, widget.size[1] / 2),
                          align="right")
@@ -72,14 +74,14 @@ class CellSettings(gui.MessageBox):
             buttons += ['Connect']
         if stored_passphrase is not None:
             buttons += ['Forget']
-        buttons += ['Cancel']    
-        
+        buttons += ['Cancel']
+
         super(CellSettings, self).__init__((20, 20), (280, 160), "topleft", style=style,
                                            buttons=buttons)
         gui.StaticText((140, 0), (100, 30), "top", parent=self.panel, label=cell.ssid)
         self.cell = cell
 
-        if cell.type in ("WPA","WPA2","WEP"):
+        if cell.type in ("WPA", "WPA2", "WEP"):
             pwd = stored_passphrase or ""
             gui.StaticText((10, 55), (90, 30), "left", label="Password:",
                            style=style, parent=self.panel)
@@ -89,15 +91,14 @@ class CellSettings(gui.MessageBox):
             self.password = None
 
     def close(self, label):
-        if label == "Connect": # self.present must be true
+        if label == "Connect":  # self.present must be true
             passphrase = ""
             if self.password:
                 passphrase = self.password.string
-                
+
             try:
                 wifi.connect(IFACE, self.cell, passphrase)
             except (evil.EvilError, wifi.WifiError) as e:
-                print e
                 gui.message_box(message="Failed: %s" % e)
         elif label == "Forget":
             wifi.forget_cell(self.cell)
@@ -134,7 +135,7 @@ class UpdateBox(gui.Dialog):
 
         log_header_re = re.compile(r'^tbupgrade: ([A-Za-z0-9].*)$')
         log_re = re.compile(r'^(tbupgrade: |  )?([A-Za-z0-9].*)$')
-        
+
         for line in iter(upgrade_process.stdout.readline, ''):
             log_header_match = log_header_re.match(line)
             if log_header_match:
@@ -151,13 +152,12 @@ class UpdateBox(gui.Dialog):
         if self.upgrade_thread.is_alive():
             self.log_header_text.label = self.latest_log_header
             self.log_text.label = self.latest_log
-            
             self.update(downwards=True)
         else:
             self.log_header_text.label = ''
             self.log_text.label = ''
             self.monitor.stop()
-            
+
             if self.result == 0:
                 self.message.label = "Upgrade successful. Restarting..."
                 self.create_timer(self.restart, seconds=4.0, repeating=False)
@@ -167,7 +167,7 @@ class UpdateBox(gui.Dialog):
             else:
                 self.message.label = "Error: " + str(self.result)
                 self.create_timer(lambda: self.close(None), seconds=4.0, repeating=False)
-            
+
             self.update(downwards=True)
 
     def restart(self):
