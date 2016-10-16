@@ -177,7 +177,7 @@ class UpdateBox(gui.Dialog):
 class Settings(gui.Dialog):
     # we're using a ScrollArea here in order to do the animation bit
     # but we need to alter it's functionality slightly
-    def __init__(self, background_color=(0,0,0), callback=None, style=None):
+    def __init__(self, background_color=(0, 0, 0), callback=None, style=None):
         super(Settings, self).__init__((0, 0), (320, 206), "topleft",
                                        style=style, callback=callback, transition="slide_down")
 
@@ -185,9 +185,19 @@ class Settings(gui.Dialog):
 
         self.animate_timer.period = 1.0/30
         self.cells = []
+        network_button = gui.ToggleButton((80, 23), (100, 20), parent=self.panel, label="Network")
+        system_button = gui.ToggleButton((240, 23), (100, 20), parent=self.panel, label="System")
+        network_panel = NetworkPanel((0, 40), (320, 166), "topleft", self.panel, self.style)
+        system_panel = SystemPanel((0, 40), (320, 166), "topleft", self.panel, self.style)
 
-        gui.StaticText((160, 23), (100, 20), parent=self.panel, label="Settings")
+        nb = gui.NoteBook([(network_button, network_panel), (system_button, system_panel)])
         # add widgets
+
+
+class NetworkPanel(gui.Panel):
+
+    def __init__(self, xy, size, align, parent, style=None):
+        super(NetworkPanel, self).__init__(xy, size, align, parent, style)
         i = 0
         self.current_cell = tingbot.get_wifi_cell()
         if self.current_cell is not None:
@@ -202,37 +212,37 @@ class Settings(gui.Dialog):
                 cell_list = [self.current_cell.ssid]
             else:
                 cell_list = ["Scanning..."]
-            gui.StaticText((16, 59 + i*32), (120, 27), align="left",
-                           parent=self.panel, label="Wi-Fi Network:", text_align="left")
-            self.cell_dropdown = CellDropDown((313, 59 + i*32), (153, 27),
+            gui.StaticText((16, 19 + i*32), (120, 27), align="left",
+                           parent=self, label="Wi-Fi Network:", text_align="left")
+            self.cell_dropdown = CellDropDown((313, 19 + i*32), (153, 27),
                                               align="right",
-                                              parent=self.panel,
+                                              parent=self,
                                               values=cell_list)
             i += 1
         # show IP address
-        gui.StaticText((16, 59 + i*32), (120, 27), align="left",
-                       parent=self.panel, label="IP Address:", text_align="left")
-        self.ip_label = gui.StaticText((304, 59 + i*32), (153, 27), align="right",
-                                       parent=self.panel, label="", text_align="right")
+        gui.StaticText((16, 19 + i*32), (120, 27), align="left",
+                       parent=self, label="IP Address:", text_align="left")
+        self.ip_label = gui.StaticText((304, 19 + i*32), (153, 27), align="right",
+                                       parent=self, label="", text_align="right")
         self.show_ip_address()
         i += 1
         # show tingbot version
-        gui.StaticText((16, 59 + i*32), (120, 27), align="left",
-                       parent=self.panel, label="Current version:", text_align="left")
-        self.version_label = gui.StaticText((304, 59 + i*32), (120, 27), align="right",
-                                            parent=self.panel, label="", text_align="right")
+        gui.StaticText((16, 19 + i*32), (120, 27), align="left",
+                       parent=self, label="Current version:", text_align="left")
+        self.version_label = gui.StaticText((304, 19 + i*32), (120, 27), align="right",
+                                            parent=self, label="", text_align="right")
         i += 1
         # add update button but do not show it
-        self.update_label = gui.StaticText((16, 59 + i*32), (120, 27), align="left",
-                                           parent=self.panel,
+        self.update_label = gui.StaticText((16, 19 + i*32), (120, 27), align="left",
+                                           parent=self,
                                            label="Update Available:",
                                            text_align="left")
         self.update_label.visible = False
-        self.update_button = gui.Button((313, 59 + i*32), (120, 27), align="right",
-                                        parent=self.panel, label="Update Now", callback=self.do_upgrade)
+        self.update_button = gui.Button((313, 19 + i*32), (120, 27), align="right",
+                                        parent=self, label="Update Now", callback=self.do_upgrade)
         self.update_button.visible = False
         self.update(downwards=True)
-        
+
     def show_ip_address(self):
         self.ip_label.label = tingbot.get_ip_address() or "No connection"
         self.ip_label.update()
@@ -265,7 +275,7 @@ class Settings(gui.Dialog):
             self.latest = re.search('Latest version:\s*(\d+.\d+.\d+)', info).group(1)
         except AttributeError:
             print info
-            
+
     def update_cell_dropdown(self):
             cell_list = [(x, x) for x in self.cells]
             if cell_list:
@@ -295,3 +305,37 @@ class Settings(gui.Dialog):
 
     def do_upgrade(self):
         UpdateBox().run()
+
+
+class SystemPanel(gui.Panel):
+    def __init__(self, xy, size, align, parent, style=None):
+        super(SystemPanel, self).__init__(xy, size, align, parent, style)
+        gui.StaticText((10, 30), (100, 20), align="left", label="Brightness", parent=self)
+        brightness = gui.Slider((120, 30), (170, 20), align="left", parent=self,
+                                max_val=100.0, callback=self.set_brightness)
+        brightness.value = tingbot.screen.brightness
+        gui.Button((100, 70), (60, 20), parent=self, label="Shutdown", callback=self.shutdown)
+        gui.Button((220, 70), (60, 20), parent=self, label="Reboot", callback=self.reboot)
+
+    def set_brightness(self, val):
+        tingbot.screen.brightness = int(val)
+
+    def shutdown(self):
+        if "TB_RUN_ON_LCD" not in os.environ:
+            gui.message_box(message="Not accessible on simulator")
+            return
+        if (gui.message_box(message="Shutdown: are you sure?", buttons=["Yes", "No"]) == "Yes"):
+            tingbot.screen.fill('black')
+            tingbot.screen.text("Shutting down", font_size=16, xy=(160, 80))
+            tingbot.screen.text("You can turn off when the screen turns white",
+                                font_size=12, xy=(160, 140))
+            os.system('poweroff')
+            print "shutting down not implemented yet..."
+
+    def reboot(self):
+        if "TB_RUN_ON_LCD" not in os.environ:
+            gui.message_box(message="Not accessible on simulator")
+            return
+        if (gui.message_box(message="Reboot: are you sure?", buttons=["Yes", "No"]) == "Yes"):
+            os.system('reboot')
+
