@@ -4,6 +4,7 @@ import threading
 import subprocess
 import re
 import math
+import time
 
 import pygame
 import tingbot
@@ -312,13 +313,23 @@ class SystemPanel(gui.Panel):
         super(SystemPanel, self).__init__(xy, size, align, parent, style)
         gui.StaticText((10, 30), (100, 20), align="left", label="Brightness", parent=self)
         brightness = gui.Slider((120, 30), (170, 20), align="left", parent=self,
-                                max_val=100.0, callback=self.set_brightness)
+                                max_val=100.0, 
+                                callback=self.set_brightness, 
+                                release_callback=self.set_final_brightness)
         brightness.value = tingbot.screen.brightness
         gui.Button((100, 70), (60, 20), parent=self, label="Shutdown", callback=self.shutdown)
         gui.Button((220, 70), (60, 20), parent=self, label="Reboot", callback=self.reboot)
+        self.brightness_throttle_time = time.time()
 
-    def set_brightness(self, val):
+    def set_final_brightness(self, val):
         tingbot.screen.brightness = int(val)
+        tingbot.app.settings['brightness'] = int(val)
+        
+    def set_brightness(self, val):
+        this_time = time.time()
+        if this_time > self.brightness_throttle_time + 0.1:
+            self.brightness_throttle_time = this_time
+            tingbot.screen.brightness = int(val)
 
     def shutdown(self):
         if "TB_RUN_ON_LCD" not in os.environ:

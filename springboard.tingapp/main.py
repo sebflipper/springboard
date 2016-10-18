@@ -196,6 +196,9 @@ if profiling:
         p.stop()
         print p.output_text(color=True)
 
+
+screen.brightness = tingbot.app.settings['brightness']
+
 try:
     tingbot.run(loop)
 finally:
