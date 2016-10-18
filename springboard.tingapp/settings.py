@@ -185,7 +185,6 @@ class Settings(gui.Dialog):
         self.style.bg_color = background_color
 
         self.animate_timer.period = 1.0/30
-        self.cells = []
         network_button = gui.ToggleButton((80, 23), (100, 20), parent=self.panel, label="Network")
         system_button = gui.ToggleButton((240, 23), (100, 20), parent=self.panel, label="System")
         network_panel = NetworkPanel((0, 40), (320, 166), "topleft", self.panel, self.style)
@@ -199,6 +198,7 @@ class NetworkPanel(gui.Panel):
 
     def __init__(self, xy, size, align, parent, style=None):
         super(NetworkPanel, self).__init__(xy, size, align, parent, style)
+        self.cells = []
         i = 0
         self.current_cell = tingbot.get_wifi_cell()
         if self.current_cell is not None:
