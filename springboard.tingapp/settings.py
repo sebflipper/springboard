@@ -340,6 +340,7 @@ class SystemPanel(gui.Panel):
             tingbot.screen.text("Shutting down", font_size=16, xy=(160, 80))
             tingbot.screen.text("You can turn off when the screen turns white",
                                 font_size=12, xy=(160, 140))
+            tingbot.screen.update()
             os.system('poweroff')
             print "shutting down not implemented yet..."
 
