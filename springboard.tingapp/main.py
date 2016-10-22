@@ -1,10 +1,11 @@
 import tingbot
 from threading import Timer
 from settings import Settings
+from app_options_dialog import AppOptionsDialog
 from tingbot import *
 from tingapp import TingApp
 from cached_property import cached_property
-import os, logging, math, subprocess, json
+import os, logging, math, subprocess, json, time
 
 from icon_utils import iconise, get_network_icon_name
 
@@ -31,16 +32,23 @@ class PeripheralFinder():
 apps_dir = os.environ.get('APPS_DIR', '/apps')
 apps = []
 
-for filename in os.listdir(apps_dir):
-    file = os.path.join(apps_dir, filename)
-    _, ext = os.path.splitext(file)
+def scan_apps_dir():
+    # make sure the list is empty
+    apps[:] = []
+    
+    for filename in os.listdir(apps_dir):
+        file = os.path.join(apps_dir, filename)
+        _, ext = os.path.splitext(file)
+    
+        if ext == '.tingapp':
+            apps.append(TingApp(file))
 
-    if ext == '.tingapp':
-        apps.append(TingApp(file))
+scan_apps_dir()
 
 state = {
     'app_index': 0,
     'scroll_position': 0,
+    'touch_down_time': None,
 }
 
 @left_button.press
@@ -71,6 +79,10 @@ def on_show_settings(action):
 @touch(size=(320, 240-70), align="bottom")
 def on_touch(action):
     if action == 'down':
+        state['touch_down_time'] = time.time()
+    elif action == 'up':
+        state['touch_down_time'] = None
+        
         app = apps[state['app_index']]
         screen.fill(color='black')
         screen.text(
@@ -80,6 +92,23 @@ def on_touch(action):
 
         screen.update()
         subprocess.check_call(['tbopen', os.path.abspath(app.path)])
+
+@every(seconds=1.0/10)
+def check_for_hold_event():
+    touch_down_time = state['touch_down_time']
+    hold_time = 1.5 # seconds
+    
+    if touch_down_time is not None and touch_down_time + hold_time < time.time():
+        app = apps[state['app_index']]
+        action = AppOptionsDialog(app=app).run()
+        
+        if action == 'deleted':
+            scan_apps_dir()
+            if state['app_index'] >= len(apps):
+                state['app_index'] = len(apps) - 1
+
+        state['touch_down_time'] = None
+        
 
 def draw_app_at_index(app_i, scroll_position):
     if app_i < 0 or app_i >= len(apps):
