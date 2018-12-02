@@ -49,6 +49,7 @@ state = {
     'app_index': 0,
     'scroll_position': 0,
     'touch_down_time': None,
+    'settings_touch_down_time': None,
 }
 
 @left_button.press
@@ -69,12 +70,9 @@ def button_right():
 @touch(size=(320, 70), align="top")
 def on_show_settings(action):
     if action == 'down':
-        # get the color of the screen currently
-        color = background_color(state['scroll_position'])
-        # darken that by 40%
-        color = tuple(c*0.6 for c in color)
-        # run the settings pane modally
-        Settings(background_color=color).run()
+        state['settings_touch_down_time'] = time.time()
+    elif action == 'up':
+        state['settings_touch_down_time'] = None
 
 @touch(size=(320, 240-70), align="bottom")
 def on_touch(action):
@@ -109,6 +107,17 @@ def check_for_hold_event():
 
         state['touch_down_time'] = None
         
+    settings_touch_down_time = state['settings_touch_down_time']
+    settings_hold_time = 0.1 # seconds
+    if settings_touch_down_time is not None and settings_touch_down_time + settings_hold_time < time.time():
+        # get the color of the screen currently
+        color = background_color(state['scroll_position'])
+        # darken that by 40%
+        color = tuple(c*0.6 for c in color)
+        # run the settings pane modally
+        Settings(background_color=color).run()
+
+        state['settings_touch_down_time'] = None
 
 def draw_app_at_index(app_i, scroll_position):
     if app_i < 0 or app_i >= len(apps):
